@@ -10,55 +10,55 @@ import (
 type (
 	// Uint32Store is a fast read only map from string to uint32
 	// Lookups are about 5x faster than the built-in Go map type
-	Uint32Store struct {
-		store []byteValue
+	Map[T any] struct {
+		store []mapEntry[T]
 	}
 
-	byteValue struct {
+	mapEntry[T any] struct {
 		nextLo     uint32 // index in store of next byteValues
 		nextLen    byte   // number of byteValues in store used for next possible bytes
 		nextOffset byte   // offset from zero byte value of first element of range of byteValues
 		valid      bool   // is the byte sequence with no more bytes in the map?
-		value      uint32 // value for byte sequence with no more bytes
+		value      T      // value for byte sequence with no more bytes
 	}
 
-	// Uint32Source is for supplying data to initialise Uint32Store
-	Uint32Source interface {
+	// Uint32Source is for supplying data to initialize Uint32Store
+	MapSource[T any] interface {
 		// AppendKeys should append the keys of the maps to the supplied slice and return the resulting slice
 		AppendKeys([]string) []string
 		// Get should return the value for the supplied key
-		Get(string) uint32
+		Get(string) T
 	}
 
 	// uint32Builder is used only during construction
-	uint32Builder struct {
-		all [][]byteValue
-		src Uint32Source
+	mapBuilder[T any] struct {
+		all [][]mapEntry[T]
+		src MapSource[T]
 		len int
 	}
 )
 
 // NewUint32Store creates from the data supplied in src
-func NewUint32Store(src Uint32Source) Uint32Store {
+func NewMap[T any](src MapSource[T]) Map[T] {
 	if keys := src.AppendKeys([]string(nil)); len(keys) > 0 {
 		sort.Strings(keys)
-		return Uint32Store{store: uint32Build(keys, src)}
+		return Map[T]{store: mapBuild(keys, src)}
 	}
-	return Uint32Store{store: []byteValue{{}}}
+	return Map[T]{store: []mapEntry[T]{{}}}
 }
 
 // uint32Build constructs the map by allocating memory in blocks
 // and then copying into the eventual slice at the end. This is
 // more efficient than continually using append.
-func uint32Build(keys []string, src Uint32Source) []byteValue {
-	b := uint32Builder{
-		all: [][]byteValue{make([]byteValue, 1, firstBufSize(len(keys)))},
+func mapBuild[T any](keys []string, src MapSource[T]) []mapEntry[T] {
+	b := mapBuilder[T]{
+		all: [][]mapEntry[T]{make([]mapEntry[T], 1, firstBufSize(len(keys)))},
 		src: src,
 		len: 1,
 	}
-	b.makeByteValue(&b.all[0][0], keys, 0)
+	b.makeEntry(&b.all[0][0], keys, 0)
 	// copy all blocks to one slice
-	s := make([]byteValue, 0, b.len)
+	s := make([]mapEntry[T], 0, b.len)
 	for _, a := range b.all {
 		s = append(s, a...)
 	}
@@ -67,7 +67,7 @@ func uint32Build(keys []string, src Uint32Source) []byteValue {
 
 // makeByteValue will initialize the supplied byteValue for
 // the sorted strings in slice a considering bytes at byteIndex in the strings
-func (b *uint32Builder) makeByteValue(bv *byteValue, a []string, byteIndex int) {
+func (b *mapBuilder[T]) makeEntry(bv *mapEntry[T], a []string, byteIndex int) {
 	// if there is a string with no more bytes then it is always first because they are sorted
 	if len(a[0]) == byteIndex {
 		bv.valid = true
@@ -89,7 +89,7 @@ func (b *uint32Builder) makeByteValue(bv *byteValue, a []string, byteIndex int) 
 		for iSameByteHi < n && a[iSameByteHi][byteIndex] == a[i][byteIndex] {
 			iSameByteHi++
 		}
-		b.makeByteValue(&next[(a[i][byteIndex]-bv.nextOffset)], a[i:iSameByteHi], byteIndex+1)
+		b.makeEntry(&next[(a[i][byteIndex]-bv.nextOffset)], a[i:iSameByteHi], byteIndex+1)
 		i = iSameByteHi
 	}
 }
@@ -105,7 +105,7 @@ func firstBufSize(mapSize int) int {
 }
 
 // alloc will grab space in the current block if available or allocate a new one if not
-func (b *uint32Builder) alloc(nByteValues byte) []byteValue {
+func (b *mapBuilder[T]) alloc(nByteValues byte) []mapEntry[T] {
 	n := int(nByteValues)
 	b.len += n
 	cur := &b.all[len(b.all)-1] // current
@@ -121,22 +121,24 @@ func (b *uint32Builder) alloc(nByteValues byte) []byteValue {
 	if newCap > maxBuildBufSize {
 		newCap = maxBuildBufSize
 	}
-	a := make([]byteValue, n, newCap)
+	a := make([]mapEntry[T], n, newCap)
 	b.all = append(b.all, a)
 	return a
 }
 
 // LookupString looks up the supplied string in the map
-func (m *Uint32Store) LookupString(s string) (uint32, bool) {
+func (m *Map[T]) LookupString(s string) (T, bool) {
 	bv := &m.store[0]
 	for i, n := 0, len(s); i < n; i++ {
 		b := s[i]
 		if b < bv.nextOffset {
-			return 0, false
+			var t T
+			return t, false
 		}
 		ni := b - bv.nextOffset
 		if ni >= bv.nextLen {
-			return 0, false
+			var t T
+			return t, false
 		}
 		bv = &m.store[bv.nextLo+uint32(ni)]
 	}
@@ -144,15 +146,17 @@ func (m *Uint32Store) LookupString(s string) (uint32, bool) {
 }
 
 // LookupBytes looks up the supplied byte slice in the map
-func (m *Uint32Store) LookupBytes(s []byte) (uint32, bool) {
+func (m *Map[T]) LookupBytes(s []byte) (T, bool) {
 	bv := &m.store[0]
 	for _, b := range s {
 		if b < bv.nextOffset {
-			return 0, false
+			var t T
+			return t, false
 		}
 		ni := b - bv.nextOffset
 		if ni >= bv.nextLen {
-			return 0, false
+			var t T
+			return t, false
 		}
 		bv = &m.store[bv.nextLo+uint32(ni)]
 	}

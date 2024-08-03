@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sensiblecodeio/faststringmap"
+	"github.com/RealA10N/faststringmap"
 )
 
 func TestFastStringToUint32Empty(t *testing.T) {
@@ -30,7 +30,7 @@ func TestFastStringToUint32(t *testing.T) {
 }
 
 func checkWithMapSlice(t *testing.T, ms mapSlice) {
-	fm := faststringmap.NewUint32Store(ms)
+	fm := faststringmap.NewMap[uint32](ms)
 
 	for _, k := range ms.in {
 		check := func(actV uint32, ok bool) {
@@ -121,7 +121,7 @@ const nStrsBench = 1000
 
 func BenchmarkUint32Store(b *testing.B) {
 	m := typicalCodeStrings(nStrsBench)
-	fm := faststringmap.NewUint32Store(m)
+	fm := faststringmap.NewMap[uint32](m)
 	b.ResetTimer()
 	for bi := 0; bi < b.N; bi++ {
 		for si, n := uint32(0), uint32(len(m.in)); si < n; si++ {

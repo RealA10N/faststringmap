@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sensiblecodeio/faststringmap"
+	"github.com/RealA10N/faststringmap"
 )
 
 func Example() {
@@ -15,7 +15,7 @@ func Example() {
 		"l":    2,
 	}
 
-	fm := faststringmap.NewUint32Store(m)
+	fm := faststringmap.NewMap[uint32](m)
 
 	// add an entry that is not in the fast map
 	m["m"] = 4

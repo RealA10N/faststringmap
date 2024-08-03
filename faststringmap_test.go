@@ -1,5 +1,5 @@
 // Copyright 2021 The Sensible Code Company Ltd
-// Author: Duncan Harris
+// Author: Duncan Harris & Alon Krymgand
 
 package faststringmap_test
 
@@ -12,6 +12,11 @@ import (
 
 	"github.com/RealA10N/faststringmap"
 )
+
+func TestUintMapSimpleCase(t *testing.T) {
+	ms := mapSliceN(map[string]uint32{"aaa": 1, "aab": 1}, 2)
+	checkWithMapSlice(t, ms)
+}
 
 func TestFastStringToUint32Empty(t *testing.T) {
 	ms := mapSliceN(map[string]uint32{"": 1, "a": 2, "foo": 3, "ß": 4}, 0)

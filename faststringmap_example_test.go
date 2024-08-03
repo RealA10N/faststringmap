@@ -3,7 +3,6 @@ package faststringmap_test
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/RealA10N/faststringmap"
 )
@@ -33,29 +32,12 @@ func Example() {
 		fmt.Printf("%q: %d, %v\n", k, v, ok)
 	}
 
-	// Dump out the store to aid in understanding the implementation
-	fmt.Println()
-	dump := fmt.Sprintf("%+v", fm)
-	dump = strings.ReplaceAll(dump, "}", "}\n")
-	dump = strings.ReplaceAll(dump, "[", "[\n ")
-	fmt.Println(dump)
-
 	// Output:
 	//
 	// "key1": 42, true
 	// "key2": 27644437, true
 	// "l": 2, true
 	// "m": 0, false
-	//
-	// {store:[
-	//  {nextLo:1 nextLen:2 nextOffset:107 valid:false value:0}
-	//  {nextLo:3 nextLen:1 nextOffset:101 valid:false value:0}
-	//  {nextLo:0 nextLen:0 nextOffset:0 valid:true value:2}
-	//  {nextLo:4 nextLen:1 nextOffset:121 valid:false value:0}
-	//  {nextLo:5 nextLen:2 nextOffset:49 valid:false value:0}
-	//  {nextLo:0 nextLen:0 nextOffset:0 valid:true value:42}
-	//  {nextLo:0 nextLen:0 nextOffset:0 valid:true value:27644437}
-	// ]}
 }
 
 type exampleSource map[string]uint32

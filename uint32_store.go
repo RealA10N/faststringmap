@@ -65,7 +65,7 @@ func uint32Build(keys []string, src Uint32Source) []byteValue {
 	return s
 }
 
-// makeByteValue will initialise the supplied byteValue for
+// makeByteValue will initialize the supplied byteValue for
 // the sorted strings in slice a considering bytes at byteIndex in the strings
 func (b *uint32Builder) makeByteValue(bv *byteValue, a []string, byteIndex int) {
 	// if there is a string with no more bytes then it is always first because they are sorted

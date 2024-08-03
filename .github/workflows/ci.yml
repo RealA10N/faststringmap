@@ -1,31 +1,19 @@
 name: CI
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+
+on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     name: CI
     runs-on: ubuntu-latest
 
     steps:
-      - name: Log
-        env:
-          CI_EVENT_ACTION: ${{ github.event.action }}
-          CI_PR_TITLE: ${{ github.event.pull_request.title }}
-          CI_PR_PREV_TITLE: ${{ github.event.changes.title.from }}
-        run: |
-          echo github.event.action=$CI_EVENT_ACTION
-          echo github.event.pull_request.title=$CI_PR_TITLE
-          echo github.event.changes.title.from=$CI_PR_PREV_TITLE
+      - uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: '~1.17.9'
-        id: go
+          go-version: "~1.18"
 
       - name: Install utilities
         run: |
@@ -34,21 +22,6 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           # display Go environment for reference
           go env
-
-      - name: Check out code
-        uses: actions/checkout@v2
-
-      - uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Get dependencies
-        run: |
-          go mod tidy
-          /usr/bin/git diff --exit-code
 
       - name: Build
         run: |

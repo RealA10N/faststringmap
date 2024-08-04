@@ -1,3 +1,3 @@
-module github.com/RealA10N/faststringmap
+module alon.kr/x/faststringmap
 
 go 1.18

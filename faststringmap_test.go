@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/RealA10N/faststringmap"
+	"alon.kr/x/faststringmap"
 )
 
 func TestUintMapSimpleCase(t *testing.T) {

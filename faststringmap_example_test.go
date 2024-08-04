@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/RealA10N/faststringmap"
+	"alon.kr/x/faststringmap"
 )
 
 func Example() {

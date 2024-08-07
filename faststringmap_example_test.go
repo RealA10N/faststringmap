@@ -8,21 +8,21 @@ import (
 )
 
 func Example() {
-	m := exampleSource{
-		"key1": 42,
-		"key2": 27644437,
-		"l":    2,
+	m := []faststringmap.MapEntry[uint32]{
+		{"key1", 42},
+		{"key2", 27644437},
+		{"l", 2},
 	}
 
 	fm := faststringmap.NewMap[uint32](m)
 
 	// add an entry that is not in the fast map
-	m["m"] = 4
+	m = append(m, faststringmap.MapEntry[uint32]{"m", 4})
 
 	// sort the keys so output is the same for each test run
 	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+	for _, e := range m {
+		keys = append(keys, e.Key)
 	}
 	sort.Strings(keys)
 
@@ -38,17 +38,4 @@ func Example() {
 	// "key2": 27644437, true
 	// "l": 2, true
 	// "m": 0, false
-}
-
-type exampleSource map[string]uint32
-
-func (s exampleSource) AppendKeys(a []string) []string {
-	for k := range s {
-		a = append(a, k)
-	}
-	return a
-}
-
-func (s exampleSource) Get(k string) uint32 {
-	return s[k]
 }

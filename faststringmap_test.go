@@ -4,9 +4,7 @@
 package faststringmap_test
 
 import (
-	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -14,81 +12,79 @@ import (
 )
 
 func TestUintMapSimpleCase(t *testing.T) {
-	ms := mapSliceN(map[string]uint32{"aaa": 1, "aab": 1}, 2)
-	checkWithMapSlice(t, ms)
+	desc := mapTestDescription[uint32]{
+		in: []faststringmap.MapEntry[uint32]{
+			{"aaa", 1},
+			{"aab", 1},
+		},
+	}
+	testAgainstDescriptor(t, desc)
 }
 
 func TestFastStringToUint32Empty(t *testing.T) {
-	ms := mapSliceN(map[string]uint32{"": 1, "a": 2, "foo": 3, "ß": 4}, 0)
-	checkWithMapSlice(t, ms)
+	desc := mapTestDescription[uint32]{
+		in: []faststringmap.MapEntry[uint32]{
+			{"", 1},
+			{"a", 2},
+			{"foo", 3},
+			{"ß", 4},
+		},
+	}
+	testAgainstDescriptor(t, desc)
 }
-
 func TestFastStringToUint32BigSpan(t *testing.T) {
-	ms := mapSliceN(map[string]uint32{"a!": 1, "a~": 2}, 2)
-	checkWithMapSlice(t, ms)
+	desc := mapTestDescription[uint32]{
+		in: []faststringmap.MapEntry[uint32]{
+			{"a!", 1},
+			{"a~", 2},
+		},
+	}
+	testAgainstDescriptor(t, desc)
 }
 
 func TestFastStringToUint32(t *testing.T) {
 	const nStrs = 8192
-	m := randomSmallStrings(nStrs, 8)
-	checkWithMapSlice(t, mapSliceN(m, len(m)/2))
+	allEntries := randomSmallStrings(nStrs, 8)
+	inEntries := allEntries[:nStrs/2]
+	outKeys := make([]string, 0, nStrs/2)
+	for _, e := range allEntries[nStrs/2:] {
+		outKeys = append(outKeys, e.Key)
+	}
+	testAgainstDescriptor(t, mapTestDescription[uint32]{in: inEntries, out: outKeys})
 }
 
-func checkWithMapSlice(t *testing.T, ms mapSlice) {
-	fm := faststringmap.NewMap[uint32](ms)
-
-	for _, k := range ms.in {
-		check := func(actV uint32, ok bool) {
-			if !ok {
-				t.Errorf("%q not present", k)
-			} else if actV != ms.m[k] {
-				t.Errorf("got %d want %d for %q", actV, ms.m[k], k)
-			}
-		}
-		check(fm.LookupString(k))
-		check(fm.LookupBytes([]byte(k)))
-	}
-
-	for _, k := range ms.out {
-		check := func(actV uint32, ok bool) {
-			if ok {
-				t.Errorf("%q present when not expected, got %d", k, actV)
-			}
-		}
-		check(fm.LookupString(k))
-		check(fm.LookupBytes([]byte(k)))
-	}
-}
-
-type mapSlice struct {
-	m   map[string]uint32
-	in  []string
+type mapTestDescription[T any] struct {
+	in  []faststringmap.MapEntry[T]
 	out []string
 }
 
-func mapSliceN(m map[string]uint32, n int) mapSlice {
-	if n < 0 || n > len(m) {
-		panic(fmt.Sprintf("n value %d out of range for map size %d", n, len(m)))
-	}
-	in := make([]string, 0, n)
-	out := make([]string, 0, len(m)-n)
-	nAdded := 0
+func testAgainstDescriptor[T comparable](t *testing.T, desc mapTestDescription[T]) {
+	m := faststringmap.NewMap(desc.in)
 
-	for k := range m {
-		if nAdded < n {
-			nAdded++
-			in = append(in, k)
-		} else {
-			out = append(out, k)
+	for _, e := range desc.in {
+		v, ok := m.LookupString(e.Key)
+		if !ok || v != e.Value {
+			t.Errorf("LookupString(%q) = %v, %v want %v, true", e.Key, v, ok, e.Value)
+		}
+		v, ok = m.LookupBytes([]byte(e.Key))
+		if !ok || v != e.Value {
+			t.Errorf("LookupBytes(%q) = %v, %v want %v, true", e.Key, v, ok, e.Value)
 		}
 	}
-	return mapSlice{m: m, in: in, out: out}
+
+	for _, k := range desc.out {
+		v, ok := m.LookupString(k)
+		if ok {
+			t.Errorf("LookupString(%q) = %v, expected not to be present", k, v)
+		}
+		v, ok = m.LookupBytes([]byte(k))
+		if ok {
+			t.Errorf("LookupBytes(%q) = %v, expected not to be present", k, v)
+		}
+	}
 }
 
-func (m mapSlice) AppendKeys(a []string) []string { return append(a, m.in...) }
-func (m mapSlice) Get(s string) uint32            { return m.m[s] }
-
-func randomSmallStrings(nStrs int, maxLen uint8) map[string]uint32 {
+func randomSmallStrings(nStrs int, maxLen uint8) []faststringmap.MapEntry[uint32] {
 	m := map[string]uint32{"": 0}
 	for len(m) < nStrs {
 		s := randomSmallString(maxLen)
@@ -96,7 +92,13 @@ func randomSmallStrings(nStrs int, maxLen uint8) map[string]uint32 {
 			m[s] = uint32(len(m))
 		}
 	}
-	return m
+
+	entries := make([]faststringmap.MapEntry[uint32], 0, len(m))
+	for k, v := range m {
+		entries = append(entries, faststringmap.MapEntry[uint32]{k, v})
+	}
+
+	return entries
 }
 
 func randomSmallString(maxLen uint8) string {
@@ -106,47 +108,4 @@ func randomSmallString(maxLen uint8) string {
 		sb.WriteRune(rand.Int31n(94) + 33)
 	}
 	return sb.String()
-}
-
-func typicalCodeStrings(n int) mapSlice {
-	m := make(map[string]uint32, n)
-	keys := make([]string, 0, n)
-	add := func(s string) {
-		m[s] = uint32(len(m))
-		keys = append(keys, s)
-	}
-	for i := 1; i < n; i++ {
-		add(strconv.Itoa(i))
-	}
-	add("-9")
-	return mapSlice{m: m, in: keys}
-}
-
-const nStrsBench = 1000
-
-func BenchmarkUint32Store(b *testing.B) {
-	m := typicalCodeStrings(nStrsBench)
-	fm := faststringmap.NewMap[uint32](m)
-	b.ResetTimer()
-	for bi := 0; bi < b.N; bi++ {
-		for si, n := uint32(0), uint32(len(m.in)); si < n; si++ {
-			v, ok := fm.LookupString(m.in[si])
-			if !ok || v != si {
-				b.Fatalf("ok=%v, value got %d want %d", ok, v, si)
-			}
-		}
-	}
-}
-
-func BenchmarkGoStringToUint32(b *testing.B) {
-	m := typicalCodeStrings(nStrsBench)
-	b.ResetTimer()
-	for bi := 0; bi < b.N; bi++ {
-		for si, n := uint32(0), uint32(len(m.in)); si < n; si++ {
-			v, ok := m.m[m.in[si]]
-			if !ok || v != si {
-				b.Fatalf("ok=%v, value got %d want %d", ok, v, si)
-			}
-		}
-	}
 }

@@ -5,6 +5,7 @@ package faststringmap_test
 
 import (
 	"math/rand"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -108,4 +109,51 @@ func randomSmallString(maxLen uint8) string {
 		sb.WriteRune(rand.Int31n(94) + 33)
 	}
 	return sb.String()
+}
+
+func typicalCodeStrings(n int) (m map[string]uint32, keys []string) {
+	m = make(map[string]uint32, n)
+
+	add := func(s string) {
+		m[s] = uint32(len(m))
+		keys = append(keys, s)
+	}
+
+	for i := 1; i < n; i++ {
+		add(strconv.Itoa(i))
+	}
+	add("-9")
+
+	return
+}
+
+const nStrsBench = 1000
+
+func BenchmarkFastStringMap(b *testing.B) {
+	m, keys := typicalCodeStrings(nStrsBench)
+	fm := faststringmap.FromMap(m)
+
+	b.ResetTimer()
+	for bi := 0; bi < b.N; bi++ {
+		for si, n := uint32(0), uint32(len(keys)); si < n; si++ {
+			v, ok := fm.LookupString(keys[si])
+			if !ok || v != si {
+				b.Fatalf("ok=%v, value got %d want %d", ok, v, si)
+			}
+		}
+	}
+}
+
+func BenchmarkGoStringMap(b *testing.B) {
+	m, keys := typicalCodeStrings(nStrsBench)
+
+	b.ResetTimer()
+	for bi := 0; bi < b.N; bi++ {
+		for si, n := uint32(0), uint32(len(keys)); si < n; si++ {
+			v, ok := m[keys[si]]
+			if !ok || v != si {
+				b.Fatalf("ok=%v, value got %d want %d", ok, v, si)
+			}
+		}
+	}
 }

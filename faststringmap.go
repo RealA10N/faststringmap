@@ -7,6 +7,8 @@ import (
 	"sort"
 )
 
+type Uint = uint32
+
 type (
 	// Map[T] is a fast read only map from string to generic type T
 	// Lookups are about 5x faster than the built-in Go map type
@@ -22,16 +24,16 @@ type (
 	}
 
 	mapInternalNode[T any] struct {
-		nextLo      uint32 // index in store of next mapEntry
-		nextLen     byte   // number of mapEntries in store used for next possible bytes
-		nextOffset  byte   // offset from zero byte value of first element of range of mapEntries
-		valueOffset uint32 // index+1 in values for byte sequence with no more bytes. 0 if not valid
+		nextLo      Uint // index in store of next mapEntry
+		nextLen     byte // number of mapEntries in store used for next possible bytes
+		nextOffset  byte // offset from zero byte value of first element of range of mapEntries
+		valueOffset Uint // index+1 in values for byte sequence with no more bytes. 0 if not valid
 	}
 
 	mapBuilder[T any] struct {
 		stores [][]mapInternalNode[T]
 		values []T
-		len    uint32
+		len    Uint
 	}
 )
 
@@ -113,45 +115,74 @@ func (b *mapBuilder[T]) toMap() Map[T] {
 	return m
 }
 
-// LookupString looks up the supplied string in the map
-func (m *Map[T]) LookupString(s string) (t T, ok bool) {
+// MARK: Index
+
+// IndexString returns the index of the value in the map for the supplied
+// string, or 0 if the value is not present in the map. Use AtIndex() to get
+// the value using the resulting index.
+func (m *Map[T]) IndexString(s string) Uint {
 	bv := &m.store[0]
 	for i, n := 0, len(s); i < n; i++ {
 		b := s[i]
 		if b < bv.nextOffset {
-			return t, false
+			return 0
 		}
 		ni := b - bv.nextOffset
 		if ni >= bv.nextLen {
-			return t, false
+			return 0
 		}
 		bv = &m.store[bv.nextLo+uint32(ni)]
 	}
 
 	if bv.valueOffset == 0 {
-		return t, false
+		return 0
 	}
 
-	return m.values[bv.valueOffset-1], true
+	return bv.valueOffset
+}
+
+// IndexBytes returns the index of the value in the map for the supplied
+// byte slice, or 0 if the value is not present in the map. Use AtIndex() to get
+// the value using the resulting index.
+func (m *Map[T]) IndexBytes(s []byte) Uint {
+	bv := &m.store[0]
+	for _, b := range s {
+		if b < bv.nextOffset {
+			return 0
+		}
+		ni := b - bv.nextOffset
+		if ni >= bv.nextLen {
+			return 0
+		}
+		bv = &m.store[bv.nextLo+uint32(ni)]
+	}
+
+	if bv.valueOffset == 0 {
+		return 0
+	}
+
+	return bv.valueOffset
+}
+
+// MARK: Lookup
+
+// LookupString looks up the supplied string in the map
+func (m *Map[T]) LookupString(s string) (t T, ok bool) {
+	return m.AtIndex(m.IndexString(s))
 }
 
 // LookupBytes looks up the supplied byte slice in the map
 func (m *Map[T]) LookupBytes(s []byte) (t T, ok bool) {
-	bv := &m.store[0]
-	for _, b := range s {
-		if b < bv.nextOffset {
-			return t, false
-		}
-		ni := b - bv.nextOffset
-		if ni >= bv.nextLen {
-			return t, false
-		}
-		bv = &m.store[bv.nextLo+uint32(ni)]
-	}
+	return m.AtIndex(m.IndexBytes(s))
+}
 
-	if bv.valueOffset == 0 {
+// MARK: At
+
+// AtIndex returns the value in the map at the supplied internal index
+func (m *Map[T]) AtIndex(index Uint) (t T, ok bool) {
+	if index != 0 && index-1 < Uint(len(m.values)) {
+		return m.values[index-1], true
+	} else {
 		return t, false
 	}
-
-	return m.values[bv.valueOffset-1], true
 }

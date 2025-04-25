@@ -1,8 +1,6 @@
 # faststringmap
 
-`faststringmap` is a fast read-only string keyed map for Go (golang).
-For our use case it is approximately 5 times faster than using Go's
-built-in map type with a string key. It also has the following advantages:
+`faststringmap` is a fast read-only string keyed map for Go (golang). It also has the following advantages:
 
 * look up strings and byte slices without use of the `unsafe` package
 * minimal impact on GC due to lack of pointers in the data structure
@@ -41,14 +39,14 @@ I then forked the origin repo, and improved on Duncan's implementation:
 
 ## Benchmarks
 
-Below are example benchmarks from my laptop which are for looking up every element
-in a map of size 1000. So approximate times are 25ns per lookup for the Go native map
-and 5ns per lookup for the ``faststringmap``.
-
 ```
-cpu: Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
-BenchmarkUint32Store
-BenchmarkUint32Store-8        	  218463	      4959 ns/op
-BenchmarkGoStringToUint32
-BenchmarkGoStringToUint32-8   	   49279	     24483 ns/op
+$ go test . -bench ^Benchmark   
+goos: darwin
+goarch: arm64
+pkg: alon.kr/x/faststringmap
+cpu: Apple M2 Pro
+BenchmarkFastStringMap-10         201025              5935 ns/op
+BenchmarkGoStringMap-10           117952             11465 ns/op
+PASS
+ok      alon.kr/x/faststringmap 3.829s
 ```

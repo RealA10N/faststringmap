@@ -37,7 +37,7 @@ type (
 	}
 )
 
-// NewMap[T] creates from the provided map entries
+// NewMap[T] constructs a new Map from the provided map entries
 func NewMap[T any](entries []MapEntry[T]) Map[T] {
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Key < entries[j].Key })
 
@@ -50,7 +50,7 @@ func NewMap[T any](entries []MapEntry[T]) Map[T] {
 	return b.toMap()
 }
 
-// FromMap[T] constructs a new faststringmap from a builtin Go map
+// FromMap[T] constructs a new Map from a builtin Go map
 func FromMap[T any](m map[string]T) Map[T] {
 	entries := make([]MapEntry[T], 0, len(m))
 	for k, v := range m {

@@ -121,6 +121,10 @@ func (b *mapBuilder[T]) toMap() Map[T] {
 // string, or 0 if the value is not present in the map. Use AtIndex() to get
 // the value using the resulting index.
 func (m *Map[T]) IndexString(s string) Uint {
+	if m == nil || len(m.values) == 0 {
+		return 0
+	}
+
 	bv := &m.store[0]
 	for i, n := 0, len(s); i < n; i++ {
 		b := s[i]
@@ -145,6 +149,10 @@ func (m *Map[T]) IndexString(s string) Uint {
 // byte slice, or 0 if the value is not present in the map. Use AtIndex() to get
 // the value using the resulting index.
 func (m *Map[T]) IndexBytes(s []byte) Uint {
+	if m == nil || len(m.values) == 0 {
+		return 0
+	}
+
 	bv := &m.store[0]
 	for _, b := range s {
 		if b < bv.nextOffset {

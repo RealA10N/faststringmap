@@ -12,6 +12,37 @@ import (
 	"alon.kr/x/faststringmap"
 )
 
+// The expected behavior is for the lookup methods to work even when the map is
+// a nil pointer.
+func TestNilMapLookup(t *testing.T) {
+	m := (*faststringmap.Map[uint32])(nil)
+
+	v, found := m.LookupString("foo")
+	if found {
+		t.Errorf("LookupString(foo) = %v, expected not to be present", v)
+	}
+
+	v, found = m.LookupBytes([]byte{1, 2, 3})
+	if found {
+		t.Errorf("LookupBytes(1,2,3) = %v, expected not to be present", v)
+	}
+}
+
+func TestZeroLengthMapLookup(t *testing.T) {
+	// This creates a map with zero length on the stack, but not nil.
+	m := faststringmap.NewMap[uint32](nil)
+
+	v, found := m.LookupString("foo")
+	if found {
+		t.Errorf("LookupString(foo) = %v, expected not to be present", v)
+	}
+
+	v, found = m.LookupBytes([]byte{1, 2, 3})
+	if found {
+		t.Errorf("LookupBytes(1,2,3) = %v, expected not to be present", v)
+	}
+}
+
 func TestUintMapSimpleCase(t *testing.T) {
 	desc := mapTestDescription[uint32]{
 		in: []faststringmap.MapEntry[uint32]{
